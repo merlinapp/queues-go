@@ -21,7 +21,7 @@ func NewPublisher(project, topic string) queuesgo.Publisher {
 }
 
 func (p *publisher) PublishSync(ctx context.Context, event *queuesgo.Event) (string, error) {
-	message, err := evenToPubSub(event)
+	message, err := eventToPubSub(event)
 	if err != nil {
 		return "", err
 	}
@@ -30,7 +30,7 @@ func (p *publisher) PublishSync(ctx context.Context, event *queuesgo.Event) (str
 }
 
 func (p *publisher) PublishAsync(ctx context.Context, event *queuesgo.Event) (<-chan struct{}, error) {
-	message, err := evenToPubSub(event)
+	message, err := eventToPubSub(event)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func (p *publisher) PublishAsync(ctx context.Context, event *queuesgo.Event) (<-
 	return res, nil
 }
 
-func evenToPubSub(event *queuesgo.Event) (*pubsub.Message, error) {
+func eventToPubSub(event *queuesgo.Event) (*pubsub.Message, error) {
 	data, err := json.Marshal(event.Payload)
 	if err != nil {
 		return nil, errors.New("invalid payload")
