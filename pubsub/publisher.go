@@ -16,10 +16,10 @@ type publisher struct {
 
 /*
 Creates a new Google's pubsub publisher
-the topic must exists already on the given project
+The topic must already exist in the given project.
 the objectType interface should be any of the following types, any other type will cause an error returning a nil value
 1. Copy of a structure
-2. No nil pointer of a structure
+2. Non-nil pointer to a struct of the expected type.
 3. A map with key string and any value
 */
 func NewPublisher(project, topic string, objectType interface{}) queuesgo.Publisher {
@@ -43,14 +43,20 @@ func (p *publisher) PublishSync(ctx context.Context, event *queuesgo.Event) (str
 	return result.Get(ctx)
 }
 
-func (p *publisher) PublishAsync(ctx context.Context, event *queuesgo.Event) (<-chan struct{}, error) {
+func (p *publisher) PublishAsync(ctx context.Context, event *queuesgo.Event) (<-chan queuesgo.PublicationResult, error) {
 	message, err := p.eventToPubSub(event)
 	if err != nil {
 		return nil, err
 	}
+	res := make(chan queuesgo.PublicationResult, 1)
 	result := p.topic.Publish(ctx, message)
-	res := result.Ready()
-	return res, nil
+	go func() {
+		s, err := result.Get(ctx)
+		p := queuesgo.PublicationResult{Result: s, Err: err}
+		res <- p
+		close(res)
+	}()
+	return res, err
 }
 
 func (p *publisher) eventToPubSub(event *queuesgo.Event) (*pubsub.Message, error) {
