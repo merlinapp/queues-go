@@ -46,21 +46,29 @@ func (p *subscriber) Subscribe(ctx context.Context) error {
 	err := sub.Receive(ctx, func(ctx context.Context, message *pubsub.Message) {
 		log.Printf("Recieved message: %s", message.Data)
 		event := pubsubToEvent(message)
-		p.manager(ctx, event)
-		message.Ack()
+		ack := p.manager(ctx, event)
+		if ack {
+			message.Ack()
+		}
 	})
 	return err
 }
 
-func (p *subscriber) manager(ctx context.Context, event queuesgo.Event) {
+func (p *subscriber) manager(ctx context.Context, event queuesgo.Event) bool {
 	eventName := event.Metadata.EventName
 	for _, element := range p.elements {
 		if element.event == eventName {
-			_ = element.handlerFunc(ctx, event)
+			ack, err := element.handlerFunc(ctx, event)
+			if err != nil {
+				log.Printf("An error: %s for event: %s", err.Error(), eventName)
+				return false
+			}
 			log.Printf("Operation: %s was called for event", eventName)
-			break
+			return ack
 		}
 	}
+	log.Printf("No function was registered for the event: %s", eventName)
+	return true
 }
 
 func pubsubToEvent(psMessage *pubsub.Message) queuesgo.Event {
