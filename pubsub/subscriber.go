@@ -44,7 +44,7 @@ func (p *subscriber) Subscribe(ctx context.Context) error {
 	pubsubClient, _ := pubsub.NewClient(ctx, p.project)
 	sub := pubsubClient.Subscription(p.subscriptionName)
 	err := sub.Receive(ctx, func(ctx context.Context, message *pubsub.Message) {
-		log.Printf("Recieved message: %s", message.Data)
+		log.Printf("Received message: %s", message.Data)
 		event := pubsubToEvent(message)
 		ack := p.manager(ctx, event)
 		if ack {
@@ -59,9 +59,11 @@ func (p *subscriber) manager(ctx context.Context, event queuesgo.Event) bool {
 	for _, element := range p.elements {
 		if element.event == eventName {
 			ack, err := element.handlerFunc(ctx, event)
+			// The acknowledgment
+
 			if err != nil {
 				log.Printf("An error: %s for event: %s", err.Error(), eventName)
-				return false
+				return ack
 			}
 			log.Printf("Operation: %s was called for event", eventName)
 			return ack
