@@ -16,7 +16,7 @@ type publisher struct {
 
 /*
 Creates a new Google's pubsub publisher
-the topic must exists already on the given projects
+the topic must exists already on the given project
 the objectType interface should be any of the following types, any other type will cause an error returning a nil value
 1. Copy of a structure
 2. No nil pointer of a structure

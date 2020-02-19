@@ -21,6 +21,10 @@ type routerElement struct {
 	handlerFunc queuesgo.HandlerFunc
 }
 
+/*
+Creates a new Google's pubsub subscriber implementation
+the subscription name must exists already on the given projects
+*/
 func NewSubscriber(project, subscriptionName string) queuesgo.Subscriber {
 	return &subscriber{
 		project:          project,
