@@ -20,5 +20,6 @@ type Subscriber interface {
 /*
 Function that will handle the Event received, it should return if the message should be acknowledge to the queue
 provider, true to ack, false to indicate a eventual resend (The resend will depend of the subscriber implementation)
+The event payload will contain the information of the registered object type
 */
 type HandlerFunc func(context.Context, Event) (bool, error)

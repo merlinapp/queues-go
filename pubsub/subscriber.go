@@ -3,6 +3,7 @@ package pubsub
 import (
 	"cloud.google.com/go/pubsub"
 	"context"
+	"encoding/json"
 	"errors"
 	queuesgo "github.com/merlinapp/queues-go"
 	"log"
@@ -41,21 +42,21 @@ func NewSubscriber(project, subscriptionName string, objectType interface{}) que
 	}
 }
 
-func (p *subscriber) RegisterFunction(eventName string, handler queuesgo.HandlerFunc) error {
+func (s *subscriber) RegisterFunction(eventName string, handler queuesgo.HandlerFunc) error {
 	if eventName == "" {
 		return errors.New("invalid event name")
 	}
-	p.elements = append(p.elements, routerElement{event: eventName, handlerFunc: handler})
+	s.elements = append(s.elements, routerElement{event: eventName, handlerFunc: handler})
 	return nil
 }
 
-func (p *subscriber) Subscribe(ctx context.Context) error {
-	pubsubClient, _ := pubsub.NewClient(ctx, p.project)
-	sub := pubsubClient.Subscription(p.subscriptionName)
+func (s *subscriber) Subscribe(ctx context.Context) error {
+	pubsubClient, _ := pubsub.NewClient(ctx, s.project)
+	sub := pubsubClient.Subscription(s.subscriptionName)
 	err := sub.Receive(ctx, func(ctx context.Context, message *pubsub.Message) {
 		log.Printf("Received message: %s", message.Data)
-		event := pubsubToEvent(message)
-		ack := p.manager(ctx, event)
+		event := s.pubsubToEvent(message)
+		ack := s.manager(ctx, event)
 		if ack {
 			message.Ack()
 		}
@@ -63,13 +64,15 @@ func (p *subscriber) Subscribe(ctx context.Context) error {
 	return err
 }
 
-func (p *subscriber) manager(ctx context.Context, event queuesgo.Event) bool {
+func (s *subscriber) manager(ctx context.Context, event queuesgo.Event) bool {
+	if !validateRegisteredType(event.Payload, s.objectType) {
+		panic("the received event cannot be used on the registered type")
+	}
 	eventName := event.Metadata.EventName
-	for _, element := range p.elements {
+	for _, element := range s.elements {
 		if element.event == eventName {
 			ack, err := element.handlerFunc(ctx, event)
-			// The acknowledgment
-
+			// The acknowledgment of the message is handled by the handlerFunction regardless of the error
 			if err != nil {
 				log.Printf("An error: %s for event: %s", err.Error(), eventName)
 				return ack
@@ -82,13 +85,15 @@ func (p *subscriber) manager(ctx context.Context, event queuesgo.Event) bool {
 	return true
 }
 
-func pubsubToEvent(psMessage *pubsub.Message) queuesgo.Event {
+func (s *subscriber) pubsubToEvent(psMessage *pubsub.Message) queuesgo.Event {
 	attributes := psMessage.Attributes
-
 	intTimestamp, _ := strconv.ParseInt(attributes["timestamp"], 10, 64)
 
+	payload := reflect.New(s.objectType).Interface()
+	_ = json.Unmarshal(psMessage.Data, payload)
+
 	event := queuesgo.Event{
-		Payload: psMessage.Data,
+		Payload: payload,
 		Metadata: queuesgo.EventMetadata{
 			CorrelationID: attributes["correlation_id"],
 			EventName:     attributes["event_name"],
