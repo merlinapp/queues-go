@@ -3,10 +3,10 @@ package pubsub
 import (
 	"cloud.google.com/go/pubsub"
 	"context"
-	"encoding/json"
 	"errors"
 	queuesgo "github.com/merlinapp/queues-go"
 	"log"
+	"reflect"
 	"strconv"
 )
 
@@ -14,6 +14,7 @@ type subscriber struct {
 	project          string
 	subscriptionName string
 	elements         []routerElement
+	objectType       reflect.Type
 }
 
 type routerElement struct {
@@ -24,11 +25,19 @@ type routerElement struct {
 /*
 Creates a new Google's pubsub subscriber implementation
 the subscription name must exists already on the given projects
+the objectType interface should be any of the following types, any other type will cause an error returning a nil value
+1. Copy of a structure
+2. Non-nil pointer to a struct of the expected type.
+3. A map with key string and any value
 */
-func NewSubscriber(project, subscriptionName string) queuesgo.Subscriber {
+func NewSubscriber(project, subscriptionName string, objectType interface{}) queuesgo.Subscriber {
+	if !validateType(objectType) {
+		return nil
+	}
 	return &subscriber{
 		project:          project,
 		subscriptionName: subscriptionName,
+		objectType:       reflect.TypeOf(objectType),
 	}
 }
 
@@ -75,13 +84,11 @@ func (p *subscriber) manager(ctx context.Context, event queuesgo.Event) bool {
 
 func pubsubToEvent(psMessage *pubsub.Message) queuesgo.Event {
 	attributes := psMessage.Attributes
-	var payload map[string]interface{}
-	_ = json.Unmarshal(psMessage.Data, payload)
 
 	intTimestamp, _ := strconv.ParseInt(attributes["timestamp"], 10, 64)
 
 	event := queuesgo.Event{
-		Payload: payload,
+		Payload: psMessage.Data,
 		Metadata: queuesgo.EventMetadata{
 			CorrelationID: attributes["correlation_id"],
 			EventName:     attributes["event_name"],

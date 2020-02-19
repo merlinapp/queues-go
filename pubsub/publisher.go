@@ -23,11 +23,11 @@ the objectType interface should be any of the following types, any other type wi
 3. A map with key string and any value
 */
 func NewPublisher(project, topic string, objectType interface{}) queuesgo.Publisher {
-	pubsubClient, _ := pubsub.NewClient(context.Background(), project)
-	t := pubsubClient.Topic(topic)
 	if !validateType(objectType) {
 		return nil
 	}
+	pubsubClient, _ := pubsub.NewClient(context.Background(), project)
+	t := pubsubClient.Topic(topic)
 	return &publisher{
 		topic:      t,
 		objectType: reflect.TypeOf(objectType),
