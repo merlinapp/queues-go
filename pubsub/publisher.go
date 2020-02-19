@@ -6,22 +6,36 @@ import (
 	"encoding/json"
 	"errors"
 	queuesgo "github.com/merlinapp/queues-go"
+	"reflect"
 )
 
 type publisher struct {
-	topic *pubsub.Topic
+	topic      *pubsub.Topic
+	objectType reflect.Type
 }
 
-func NewPublisher(project, topic string) queuesgo.Publisher {
+/*
+Creates a new Google's pubsub publisher
+the topic must exists already on the given projects
+the objectType interface should be any of the following types, any other type will cause an error returning a nil value
+1. Copy of a structure
+2. No nil pointer of a structure
+3. A map with key string and any value
+*/
+func NewPublisher(project, topic string, objectType interface{}) queuesgo.Publisher {
 	pubsubClient, _ := pubsub.NewClient(context.Background(), project)
 	t := pubsubClient.Topic(topic)
+	if !validateType(objectType) {
+		return nil
+	}
 	return &publisher{
-		topic: t,
+		topic:      t,
+		objectType: reflect.TypeOf(objectType),
 	}
 }
 
 func (p *publisher) PublishSync(ctx context.Context, event *queuesgo.Event) (string, error) {
-	message, err := eventToPubSub(event)
+	message, err := p.eventToPubSub(event)
 	if err != nil {
 		return "", err
 	}
@@ -30,7 +44,7 @@ func (p *publisher) PublishSync(ctx context.Context, event *queuesgo.Event) (str
 }
 
 func (p *publisher) PublishAsync(ctx context.Context, event *queuesgo.Event) (<-chan struct{}, error) {
-	message, err := eventToPubSub(event)
+	message, err := p.eventToPubSub(event)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +53,10 @@ func (p *publisher) PublishAsync(ctx context.Context, event *queuesgo.Event) (<-
 	return res, nil
 }
 
-func eventToPubSub(event *queuesgo.Event) (*pubsub.Message, error) {
+func (p *publisher) eventToPubSub(event *queuesgo.Event) (*pubsub.Message, error) {
+	if !validateRegisteredType(event.Payload, p.objectType) {
+		return nil, errors.New("invalid payload")
+	}
 	data, err := json.Marshal(event.Payload)
 	if err != nil {
 		return nil, errors.New("invalid payload")

@@ -5,8 +5,8 @@ import (
 )
 
 type Event struct {
-	Payload  map[string]interface{} `json:"payload"`  // JSON body of the actual message
-	Metadata EventMetadata          `json:"metadata"` // Event info
+	Payload  interface{}   `json:"payload"`  // JSON body of the actual message
+	Metadata EventMetadata `json:"metadata"` // Event info
 }
 
 type EventMetadata struct {
