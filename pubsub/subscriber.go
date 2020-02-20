@@ -89,7 +89,13 @@ func (s *subscriber) pubsubToEvent(psMessage *pubsub.Message) queuesgo.Event {
 	attributes := psMessage.Attributes
 	intTimestamp, _ := strconv.ParseInt(attributes["timestamp"], 10, 64)
 
-	payload := reflect.New(s.objectType).Interface()
+	var payload interface{}
+	if s.objectType.Kind() == reflect.Ptr {
+		payload = reflect.New(s.objectType.Elem()).Interface()
+	} else {
+		payload = reflect.New(s.objectType).Interface()
+	}
+
 	_ = json.Unmarshal(psMessage.Data, payload)
 
 	event := queuesgo.Event{
