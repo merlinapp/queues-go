@@ -21,22 +21,23 @@ func main() {
 
 	err := sub.Subscribe(context.Background())
 	if err != nil {
+		fmt.Println(err)
 		panic("something went really wrong")
 	}
 }
 
 func handleBookCreation(ctx context.Context, event queuesgo.Event) (bool, error) {
-	br := event.Payload.(BookReplica)
+	br := event.Payload.(*BookReplica)
 	saveReplica(ctx, br)
 	return true, nil
 }
 
 func handleBookInactivation(ctx context.Context, event queuesgo.Event) (bool, error) {
-	br := event.Payload.(BookReplica)
+	br := event.Payload.(*BookReplica)
 	saveReplica(ctx, br)
 	return false, nil
 }
 
-func saveReplica(ctx context.Context, book BookReplica) {
+func saveReplica(ctx context.Context, book *BookReplica) {
 	fmt.Printf("saving book replica %s", book.ID)
 }

@@ -19,11 +19,11 @@ func validateRegisteredType(obj interface{}, regType reflect.Type) bool {
 	switch {
 	case t == regType:
 		return true
-	case t.Kind() == reflect.Ptr && regType.Kind() == reflect.Struct:
+	case t.Kind() == reflect.Ptr && (regType.Kind() == reflect.Struct || regType.Kind() == reflect.Map):
 		if t == reflect.PtrTo(regType) {
 			return true
 		}
-	case regType.Kind() == reflect.Ptr && t.Kind() == reflect.Struct:
+	case regType.Kind() == reflect.Ptr && (t.Kind() == reflect.Struct || t.Kind() == reflect.Map):
 		if regType == reflect.PtrTo(t) {
 			return true
 		}
