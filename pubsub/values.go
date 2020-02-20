@@ -4,13 +4,11 @@ import "reflect"
 
 func validateType(objType interface{}) bool {
 	t := reflect.TypeOf(objType)
-	if t.Kind() == reflect.Ptr && objType == nil {
-		return false
+	if t.Kind() == reflect.Ptr {
+		return objType != nil
 	}
-	if t.Kind() != reflect.Struct || t.Kind() != reflect.Map {
-		return false
-	}
-	return true
+	return t.Kind() == reflect.Struct || t.Kind() == reflect.Map
+
 }
 
 func validateRegisteredType(obj interface{}, regType reflect.Type) bool {
