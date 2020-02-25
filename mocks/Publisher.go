@@ -12,15 +12,15 @@ type Publisher struct {
 }
 
 // PublishAsync provides a mock function with given fields: ctx, event
-func (_m *Publisher) PublishAsync(ctx context.Context, event *queuesgo.Event) (<-chan struct{}, error) {
+func (_m *Publisher) PublishAsync(ctx context.Context, event *queuesgo.Event) (<-chan queuesgo.PublicationResult, error) {
 	ret := _m.Called(ctx, event)
 
-	var r0 <-chan struct{}
-	if rf, ok := ret.Get(0).(func(context.Context, *queuesgo.Event) <-chan struct{}); ok {
+	var r0 <-chan queuesgo.PublicationResult
+	if rf, ok := ret.Get(0).(func(context.Context, *queuesgo.Event) <-chan queuesgo.PublicationResult); ok {
 		r0 = rf(ctx, event)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(<-chan struct{})
+			r0 = ret.Get(0).(<-chan queuesgo.PublicationResult)
 		}
 	}
 
