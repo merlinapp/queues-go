@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	queuesgo "github.com/merlinapp/queues-go"
 	"log"
 	"reflect"
@@ -16,6 +17,7 @@ type subscriber struct {
 	subscriptionName string
 	elements         []routerElement
 	objectType       reflect.Type
+	logMode          bool
 }
 
 type routerElement struct {
@@ -31,7 +33,7 @@ the objectType interface should be any of the following types, any other type wi
 2. Non-nil pointer to a struct of the expected type.
 3. A map with key string and any value
 */
-func NewSubscriber(project, subscriptionName string, objectType interface{}) queuesgo.Subscriber {
+func NewSubscriber(project, subscriptionName string, objectType interface{}, logMode bool) queuesgo.Subscriber {
 	if !validateType(objectType) {
 		return nil
 	}
@@ -39,6 +41,7 @@ func NewSubscriber(project, subscriptionName string, objectType interface{}) que
 		project:          project,
 		subscriptionName: subscriptionName,
 		objectType:       reflect.TypeOf(objectType),
+		logMode:          logMode,
 	}
 }
 
@@ -54,7 +57,7 @@ func (s *subscriber) Subscribe(ctx context.Context) error {
 	pubsubClient, _ := pubsub.NewClient(ctx, s.project)
 	sub := pubsubClient.Subscription(s.subscriptionName)
 	err := sub.Receive(ctx, func(ctx context.Context, message *pubsub.Message) {
-		log.Printf("Received message: %s", message.Data)
+		s.logger(fmt.Sprintf("Received message: %s", message.Data))
 		event := s.pubsubToEvent(message)
 		ack := s.manager(ctx, event)
 		if ack {
@@ -74,10 +77,10 @@ func (s *subscriber) manager(ctx context.Context, event queuesgo.Event) bool {
 			ack, err := element.handlerFunc(ctx, event)
 			// The acknowledgment of the message is handled by the handlerFunction regardless of the error
 			if err != nil {
-				log.Printf("An error: %s for event: %s", err.Error(), eventName)
+				log.Println(fmt.Sprintf("An error: %s for event: %s", err.Error(), eventName))
 				return ack
 			}
-			log.Printf("Operation: %s was called for event", eventName)
+			s.logger(fmt.Sprintf("Operation: %s was called for event", eventName))
 			return ack
 		}
 	}
@@ -113,4 +116,10 @@ func (s *subscriber) pubsubToEvent(psMessage *pubsub.Message) queuesgo.Event {
 		event.Metadata.UserID = userID
 	}
 	return event
+}
+
+func (s *subscriber) logger(message string) {
+	if s.logMode {
+		log.Println(message)
+	}
 }
