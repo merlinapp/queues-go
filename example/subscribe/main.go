@@ -15,7 +15,7 @@ type BookReplica struct {
 }
 
 func main() {
-	sub := pubsub.NewSubscriber(os.Getenv("PROJECT"), "books-replica", &BookReplica{})
+	sub := pubsub.NewSubscriber(os.Getenv("PROJECT"), "books-replica", &BookReplica{}, true)
 	_ = sub.RegisterFunction("create", handleBookCreation)
 	_ = sub.RegisterFunction("inactive", handleBookInactivation)
 
