@@ -18,18 +18,47 @@ type publisher struct {
 	objectType reflect.Type
 }
 
+type Schema struct {
+	Type   string  `json:"type"`
+	Name   string  `json:"name"`
+	Fields []Field `json:"fields"`
+}
+
+type Field struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+
 /*
 Creates a new Kafka publisher
 the objectType interface should be any of the following types, any other type will cause an error returning a nil value
 1. Copy of a structure
 2. Non-nil pointer to a struct of the expected type.
-3. A map with key string and any value
+If the structure doesn't have json tags, the schema will follow the literal fields names.
 */
 func NewPublisher(kafkaServerAddress, schemaServerAddress, topic string, objectType interface{}) queuesgo.Publisher {
 	if !queuesgo.ValidateType(objectType) {
 		return nil
 	}
-	//TODO: Add schema string from the objectType
+
+	fieldsMap := queuesgo.GetFields(objectType)
+	fields := make([]Field, 0, len(fieldsMap))
+	for key, val := range fieldsMap {
+		//TODO: Add support for complex types
+		fields = append(fields, Field{
+			Name: key,
+			Type: val,
+		})
+	}
+	schema := Schema{
+		Type:   "record",
+		Name:   queuesgo.GetType(objectType),
+		Fields: fields,
+	}
+	schemaBytes, err := json.Marshal(schema)
+	if err != nil {
+		return nil
+	}
 	producer, err := kafka.NewAvroProducer([]string{kafkaServerAddress}, []string{schemaServerAddress})
 	if err != nil {
 		log.Printf("Could not create avro producer: %s", err)
@@ -38,6 +67,7 @@ func NewPublisher(kafkaServerAddress, schemaServerAddress, topic string, objectT
 	return &publisher{
 		producer:   producer,
 		topic:      topic,
+		schema:     string(schemaBytes),
 		objectType: reflect.TypeOf(objectType),
 	}
 }

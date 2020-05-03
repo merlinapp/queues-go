@@ -11,6 +11,29 @@ func ValidateType(objType interface{}) bool {
 
 }
 
+func GetType(val interface{}) string {
+	if t := reflect.TypeOf(val); t.Kind() == reflect.Ptr {
+		return t.Elem().Name()
+	} else {
+		return t.Name()
+	}
+}
+
+func GetFields(val interface{}) map[string]string {
+	v := reflect.Indirect(reflect.ValueOf(val))
+	fields := make(map[string]string, v.NumField())
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Type().Field(i)
+		jsonTag := field.Tag.Get("json")
+		if jsonTag != "" {
+			fields[jsonTag] = v.Field(i).Type().Name()
+		} else {
+			fields[field.Name] = v.Field(i).Type().Name()
+		}
+	}
+	return fields
+}
+
 func ValidateRegisteredType(obj interface{}, regType reflect.Type) bool {
 	if !ValidateType(obj) {
 		return false
