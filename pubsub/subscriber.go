@@ -34,7 +34,7 @@ the objectType interface should be any of the following types, any other type wi
 3. A map with key string and any value
 */
 func NewSubscriber(project, subscriptionName string, objectType interface{}, logMode bool) queuesgo.Subscriber {
-	if !validateType(objectType) {
+	if !queuesgo.ValidateType(objectType) {
 		return nil
 	}
 	return &subscriber{
@@ -68,7 +68,7 @@ func (s *subscriber) Subscribe(ctx context.Context) error {
 }
 
 func (s *subscriber) manager(ctx context.Context, event queuesgo.Event) bool {
-	if !validateRegisteredType(event.Payload, s.objectType) {
+	if !queuesgo.ValidateRegisteredType(event.Payload, s.objectType) {
 		panic("the received event cannot be used on the registered type")
 	}
 	eventName := event.Metadata.EventName

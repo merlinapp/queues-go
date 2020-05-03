@@ -1,8 +1,8 @@
-package pubsub
+package queuesgo
 
 import "reflect"
 
-func validateType(objType interface{}) bool {
+func ValidateType(objType interface{}) bool {
 	t := reflect.TypeOf(objType)
 	if t.Kind() == reflect.Ptr {
 		return objType != nil
@@ -11,8 +11,8 @@ func validateType(objType interface{}) bool {
 
 }
 
-func validateRegisteredType(obj interface{}, regType reflect.Type) bool {
-	if !validateType(obj) {
+func ValidateRegisteredType(obj interface{}, regType reflect.Type) bool {
+	if !ValidateType(obj) {
 		return false
 	}
 	t := reflect.TypeOf(obj)

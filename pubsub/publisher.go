@@ -23,7 +23,7 @@ the objectType interface should be any of the following types, any other type wi
 3. A map with key string and any value
 */
 func NewPublisher(project, topic string, objectType interface{}) queuesgo.Publisher {
-	if !validateType(objectType) {
+	if !queuesgo.ValidateType(objectType) {
 		return nil
 	}
 	pubsubClient, _ := pubsub.NewClient(context.Background(), project)
@@ -60,7 +60,7 @@ func (p *publisher) PublishAsync(ctx context.Context, event *queuesgo.Event) (<-
 }
 
 func (p *publisher) eventToPubSub(event *queuesgo.Event) (*pubsub.Message, error) {
-	if !validateRegisteredType(event.Payload, p.objectType) {
+	if !queuesgo.ValidateRegisteredType(event.Payload, p.objectType) {
 		return nil, errors.New("invalid payload")
 	}
 	data, err := json.Marshal(event.Payload)
