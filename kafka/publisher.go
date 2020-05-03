@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/dangkaka/go-kafka-avro"
 	queuesgo "github.com/merlinapp/queues-go"
 	"log"
@@ -18,17 +19,6 @@ type publisher struct {
 	objectType reflect.Type
 }
 
-type Schema struct {
-	Type   string  `json:"type"`
-	Name   string  `json:"name"`
-	Fields []Field `json:"fields"`
-}
-
-type Field struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-}
-
 /*
 Creates a new Kafka publisher
 the objectType interface should be any of the following types, any other type will cause an error returning a nil value
@@ -40,25 +30,12 @@ func NewPublisher(kafkaServerAddress, schemaServerAddress, topic string, objectT
 	if !queuesgo.ValidateType(objectType) {
 		return nil
 	}
-
-	fieldsMap := queuesgo.GetFields(objectType)
-	fields := make([]Field, 0, len(fieldsMap))
-	for key, val := range fieldsMap {
-		//TODO: Add support for complex types
-		fields = append(fields, Field{
-			Name: key,
-			Type: val,
-		})
-	}
-	schema := Schema{
-		Type:   "record",
-		Name:   queuesgo.GetType(objectType),
-		Fields: fields,
-	}
+	schema := createSchema(queuesgo.GetName(objectType), queuesgo.GetFields(objectType))
 	schemaBytes, err := json.Marshal(schema)
 	if err != nil {
 		return nil
 	}
+	fmt.Println("Schema registered: " + string(schemaBytes))
 	producer, err := kafka.NewAvroProducer([]string{kafkaServerAddress}, []string{schemaServerAddress})
 	if err != nil {
 		log.Printf("Could not create avro producer: %s", err)
