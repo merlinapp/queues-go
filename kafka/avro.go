@@ -42,7 +42,15 @@ func createField(key string, val interface{}) Field {
 	if reflect.TypeOf(val).Kind() == reflect.Slice {
 		value = createComplexField(val)
 	} else {
-		value = val
+		switch val {
+		case "int", "int8", "int32":
+			value = "int"
+		case "int64":
+			value = "long"
+		default:
+			value = val
+		}
+
 	}
 	f := Field{
 		Name: key,
