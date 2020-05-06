@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dangkaka/go-kafka-avro"
+	"github.com/ericpubu/go-kafka-avro"
 	queuesgo "github.com/merlinapp/queues-go"
 	"log"
 	"reflect"
+	"strings"
 )
 
 type publisher struct {
@@ -20,12 +21,13 @@ type publisher struct {
 
 /*
 Creates a new Kafka publisher
+the kafkaServerAddresses string can receive several hosts separated by ','
 the objectType interface should be any of the following types, any other type will cause an error returning a nil value
 1. Copy of a structure
 2. Non-nil pointer to a struct of the expected type.
 If the structure doesn't have json tags, the schema will follow the literal fields names.
 */
-func NewPublisher(kafkaServerAddress, schemaServerAddress, topic string, objectType interface{}) queuesgo.Publisher {
+func NewPublisher(kafkaServerHosts, schemaServerAddress, topic string, objectType interface{}) queuesgo.Publisher {
 	if !queuesgo.ValidateType(objectType) {
 		return nil
 	}
@@ -35,7 +37,7 @@ func NewPublisher(kafkaServerAddress, schemaServerAddress, topic string, objectT
 		return nil
 	}
 	fmt.Println("Schema registered: " + string(schemaBytes))
-	producer, err := kafka.NewAvroProducer([]string{kafkaServerAddress}, []string{schemaServerAddress})
+	producer, err := kafka.NewAvroProducer(strings.Split(kafkaServerHosts, ","), []string{schemaServerAddress})
 	if err != nil {
 		log.Printf("Could not create avro producer: %s", err)
 		return nil
