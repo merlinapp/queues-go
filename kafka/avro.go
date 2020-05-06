@@ -47,6 +47,8 @@ func createField(key string, val interface{}) Field {
 			value = "int"
 		case "int64":
 			value = "long"
+		case "bool":
+			value = "boolean"
 		default:
 			value = val
 		}
