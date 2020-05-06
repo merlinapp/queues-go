@@ -9,7 +9,6 @@ import (
 	queuesgo "github.com/merlinapp/queues-go"
 	"log"
 	"reflect"
-	"time"
 )
 
 type publisher struct {
@@ -54,9 +53,8 @@ func (p *publisher) PublishSync(ctx context.Context, event *queuesgo.Event) (str
 	if err != nil {
 		return "", err
 	}
-	key := time.Now().String()
-	err = p.producer.Add(p.topic, p.schema, []byte(key), data)
-	return key, err
+	err = p.producer.Add(p.topic, p.schema, []byte(event.Metadata.ObjectID), data)
+	return event.Metadata.ObjectID, err
 }
 
 func (p *publisher) PublishAsync(ctx context.Context, event *queuesgo.Event) (<-chan queuesgo.PublicationResult, error) {
