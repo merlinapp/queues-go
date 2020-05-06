@@ -66,9 +66,8 @@ func (p *publisher) PublishAsync(ctx context.Context, event *queuesgo.Event) (<-
 	}
 	res := make(chan queuesgo.PublicationResult, 1)
 	go func() {
-		key := time.Now().String()
-		err = p.producer.Add(p.topic, p.schema, []byte(key), data)
-		p := queuesgo.PublicationResult{Result: key, Err: err}
+		err = p.producer.Add(p.topic, p.schema, []byte(event.Metadata.ObjectID), data)
+		p := queuesgo.PublicationResult{Result: event.Metadata.ObjectID, Err: err}
 		res <- p
 		close(res)
 	}()
