@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dangkaka/go-kafka-avro"
+	"github.com/ericpubu/go-kafka-avro"
 	queuesgo "github.com/merlinapp/queues-go"
 	"log"
 	"reflect"
