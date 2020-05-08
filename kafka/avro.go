@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"reflect"
+	"sort"
 )
 
 type Schema struct {
@@ -30,6 +31,9 @@ func createSchema(name string, fieldsMap map[string]interface{}) Schema {
 	for key, val := range fieldsMap {
 		fields = append(fields, createField(key, val))
 	}
+	sort.Slice(fields, func(i, j int) bool {
+		return fields[i].Name < fields[j].Name
+	})
 	return Schema{
 		Type:   "record",
 		Name:   name,
