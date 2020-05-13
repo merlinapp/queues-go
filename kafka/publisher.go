@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	ckafka "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/linkedin/goavro/v2"
 	queuesgo "github.com/merlinapp/queues-go"
 	"log"
@@ -14,7 +14,7 @@ import (
 )
 
 type publisher struct {
-	producer             *kafka.Producer
+	producer             *ckafka.Producer
 	schemaRegistryClient *CachedSchemaRegistryClient
 	topic                string
 	schema               string
@@ -42,7 +42,7 @@ func NewPublisher(kafkaServerHosts, schemaServerAddress, topic string, objectTyp
 	}
 	fmt.Println("Schema registered: " + string(schemaBytes))
 
-	producer, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": kafkaServerHosts})
+	producer, err := ckafka.NewProducer(&ckafka.ConfigMap{"bootstrap.servers": kafkaServerHosts})
 	if err != nil {
 		log.Printf("Could not create avro producer: %s", err)
 		return nil
@@ -88,7 +88,7 @@ func (p *publisher) getSchemaId(avroCodec *goavro.Codec) (int, error) {
 	return schemaId, nil
 }
 
-func (p *publisher) sendMessage(key []byte, value []byte, headers []kafka.Header) (string, error) {
+func (p *publisher) sendMessage(key []byte, value []byte, headers []ckafka.Header) (string, error) {
 	avroCodec, err := goavro.NewCodec(p.schema)
 	schemaId, err := p.getSchemaId(avroCodec)
 	if err != nil {
@@ -110,17 +110,17 @@ func (p *publisher) sendMessage(key []byte, value []byte, headers []kafka.Header
 	}
 
 	message, _ := avrEncoder.Encode()
-	deliveryChan := make(chan kafka.Event)
+	deliveryChan := make(chan ckafka.Event)
 
-	err = p.producer.Produce(&kafka.Message{
-		TopicPartition: kafka.TopicPartition{Topic: &p.topic, Partition: kafka.PartitionAny},
+	err = p.producer.Produce(&ckafka.Message{
+		TopicPartition: ckafka.TopicPartition{Topic: &p.topic, Partition: ckafka.PartitionAny},
 		Key:            key,
 		Value:          message,
 		Headers:        headers,
 	}, deliveryChan)
 
 	e := <-deliveryChan
-	m := e.(*kafka.Message)
+	m := e.(*ckafka.Message)
 
 	var msg string
 	if m.TopicPartition.Error != nil {
@@ -133,7 +133,7 @@ func (p *publisher) sendMessage(key []byte, value []byte, headers []kafka.Header
 	return msg, err
 }
 
-func (p *publisher) eventToKafka(event *queuesgo.Event) ([]byte, []kafka.Header, error) {
+func (p *publisher) eventToKafka(event *queuesgo.Event) ([]byte, []ckafka.Header, error) {
 	if !queuesgo.ValidateRegisteredType(event.Payload, p.objectType) {
 		return nil, nil, errors.New("invalid payload")
 	}
@@ -141,24 +141,24 @@ func (p *publisher) eventToKafka(event *queuesgo.Event) ([]byte, []kafka.Header,
 	if err != nil {
 		return nil, nil, errors.New("invalid payload")
 	}
-	headers := make([]kafka.Header, 5)
-	headers[0] = kafka.Header{
+	headers := make([]ckafka.Header, 5)
+	headers[0] = ckafka.Header{
 		Key:   "correlation_id",
 		Value: []byte(event.Metadata.CorrelationID),
 	}
-	headers[1] = kafka.Header{
+	headers[1] = ckafka.Header{
 		Key:   "event_name",
 		Value: []byte(event.Metadata.EventName),
 	}
-	headers[2] = kafka.Header{
+	headers[2] = ckafka.Header{
 		Key:   "origin",
 		Value: []byte(event.Metadata.Origin),
 	}
-	headers[3] = kafka.Header{
+	headers[3] = ckafka.Header{
 		Key:   "object_id",
 		Value: []byte(event.Metadata.ObjectID),
 	}
-	headers[4] = kafka.Header{
+	headers[4] = ckafka.Header{
 		Key:   "timestamp",
 		Value: []byte(string(event.Metadata.Timestamp)),
 	}
