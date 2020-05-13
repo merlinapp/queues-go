@@ -22,7 +22,7 @@ type Properties struct {
 }
 
 func main() {
-	pub := kafka.NewPublisher("localhost:9092", "http://localhost:8081", "events3", Event{})
+	pub := kafka.NewPublisher("localhost:9092", "http://localhost:8081", "events", Event{})
 	if pub == nil {
 		panic("cannot create publisher")
 	}

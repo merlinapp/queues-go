@@ -42,7 +42,7 @@ func NewPublisher(kafkaServerHosts, schemaServerAddress, topic string, objectTyp
 	}
 	fmt.Println("Schema registered: " + string(schemaBytes))
 
-	producer, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": strings.Split(kafkaServerHosts, ",")})
+	producer, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": kafkaServerHosts})
 	if err != nil {
 		log.Printf("Could not create avro producer: %s", err)
 		return nil
