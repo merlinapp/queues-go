@@ -61,8 +61,7 @@ func (p *publisher) PublishSync(ctx context.Context, event *queuesgo.Event) (str
 	if err != nil {
 		return "", err
 	}
-	err = p.sendMessage([]byte(event.Metadata.ObjectID), data, headers)
-	return event.Metadata.ObjectID, err
+	return p.sendMessage([]byte(event.Metadata.ObjectID), data, headers)
 }
 
 func (p *publisher) PublishAsync(ctx context.Context, event *queuesgo.Event) (<-chan queuesgo.PublicationResult, error) {
@@ -72,8 +71,8 @@ func (p *publisher) PublishAsync(ctx context.Context, event *queuesgo.Event) (<-
 	}
 	res := make(chan queuesgo.PublicationResult, 1)
 	go func() {
-		err = p.sendMessage([]byte(event.Metadata.ObjectID), data, headers)
-		p := queuesgo.PublicationResult{Result: event.Metadata.ObjectID, Err: err}
+		result, err := p.sendMessage([]byte(event.Metadata.ObjectID), data, headers)
+		p := queuesgo.PublicationResult{Result: result, Err: err}
 		res <- p
 		close(res)
 	}()
@@ -89,20 +88,20 @@ func (p *publisher) getSchemaId(avroCodec *goavro.Codec) (int, error) {
 	return schemaId, nil
 }
 
-func (p *publisher) sendMessage(key []byte, value []byte, headers []kafka.Header) error {
+func (p *publisher) sendMessage(key []byte, value []byte, headers []kafka.Header) (string, error) {
 	avroCodec, err := goavro.NewCodec(p.schema)
 	schemaId, err := p.getSchemaId(avroCodec)
 	if err != nil {
-		return err
+		return "", err
 	}
 	native, _, err := avroCodec.NativeFromTextual(value)
 	if err != nil {
-		return err
+		return "", err
 	}
 	// Convert native Go form to binary Avro data
 	binaryValue, err := avroCodec.BinaryFromNative(nil, native)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	avrEncoder := &AvroEncoder{
@@ -123,14 +122,15 @@ func (p *publisher) sendMessage(key []byte, value []byte, headers []kafka.Header
 	e := <-deliveryChan
 	m := e.(*kafka.Message)
 
+	var msg string
 	if m.TopicPartition.Error != nil {
-		fmt.Printf("Delivery failed: %v\n", m.TopicPartition.Error)
+		err = m.TopicPartition.Error
 	} else {
-		fmt.Printf("Delivered message to topic %s [%d] at offset %v\n",
+		msg = fmt.Sprintf("Delivered message to topic %s [%d] at offset %v\n",
 			*m.TopicPartition.Topic, m.TopicPartition.Partition, m.TopicPartition.Offset)
 	}
 	close(deliveryChan)
-	return err
+	return msg, err
 }
 
 func (p *publisher) eventToKafka(event *queuesgo.Event) ([]byte, []kafka.Header, error) {
